@@ -1,0 +1,56 @@
+# Builds Joy OSC for Windows, Apple Silicon Macs and Intel Macs.
+# Run it from the Actions tab ("Run workflow"), or push a tag like v1.0
+# to also attach the files to a GitHub Release.
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            file: Joy-OSC-windows.exe
+          - os: macos-14
+            file: Joy-OSC-mac-arm64.zip
+          - os: macos-15-intel
+            file: Joy-OSC-mac-x86_64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: echo.| build_windows.bat
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: ./build_mac.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.file }}
+          path: releases/${{ matrix.file }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: releases
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: releases/*

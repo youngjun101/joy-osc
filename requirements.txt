@@ -1,0 +1,2 @@
+hidapi>=0.14
+python-osc>=1.8
